@@ -1,0 +1,72 @@
+---
+title: "Human Health and Economic Cost of Weather Events"
+author: "Amelia"
+date: "2/11/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+```
+
+
+## Sypnosis 
+The human health cost of weather events is analysed in terms of injuries and fatalities and the economic cost is analysed in terms of property and crop damage. The weather event most harmful to human health is tornados, followed by excessive heat and lightning. The events with the most economic consequences is flood, followed by hurricane/typhoon and tornados.
+
+## Data processing
+Data is processed into plottable form in this section.
+```{r data processing}
+# Read csv into R
+dat<- read.csv("repdata%2Fdata%2FStormData.csv")
+# Set up required libraries
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+# Aggregating data and processing into plottable form for human health costs
+fatal <- aggregate(FATALITIES ~ EVTYPE, dat, sum)
+injuries <- aggregate(INJURIES ~ EVTYPE, dat, sum)
+health <- merge(fatal, injuries)
+health2<- health[rowSums(health[, -1])>0, ]
+health3<- health2[order(health2$FATALITIES, health2$INJURIES, decreasing = TRUE),]
+health4<- gather(health3[1:10,], "Harm","Number",FATALITIES:INJURIES )
+
+# Aggregating data and processing into plottable form for economic costs
+dmg<- select(dat, EVTYPE,PROPDMG:CROPDMGEXP)
+# Treating data to make costs the same units
+dmg<- mutate(dmg, PROPDMG2 = ifelse(PROPDMGEXP == "K", PROPDMG*1000, ifelse(PROPDMGEXP == "M", PROPDMG*1000000, ifelse(PROPDMGEXP == "B", PROPDMG*1000000000,0))))
+dmg<- mutate(dmg, CROPDMG2 = ifelse(CROPDMGEXP == "K", CROPDMG*1000, ifelse(CROPDMGEXP == "M", CROPDMG*1000000, ifelse(CROPDMGEXP == "B", CROPDMG*1000000000,0))))
+# Aggregating data
+eccon <- aggregate(PROPDMG2+CROPDMG2 ~ EVTYPE, dmg, sum)
+eccon<- eccon[order(eccon$`PROPDMG2 + CROPDMG2`, decreasing = TRUE),]
+eccon2<- eccon[1:10,]
+
+```
+
+## Results
+The plots and conclusions are given in this section.
+```{r results}
+# Plot for human health costs
+g<-ggplot(data = health4, aes(x=EVTYPE, y = Number, fill= Harm)) + 
+          geom_bar(stat="identity") 
+print(g)
+```
+
+The weather event most harmful to human health is tornados, followed by excessive heat and lightning
+
+```{r results2}
+# Plot for economic cost
+h<-ggplot(data = eccon2, aes(x=EVTYPE, y = `PROPDMG2 + CROPDMG2`)) + 
+  geom_bar(stat="identity") +
+  labs(x = "Event Types", y = "Cost/dollar")
+print(h)
+```
+
+The events with the most economic consequences is flood, followed by hurricane/typhoon and tornados
+
+## Conclusion
+The weather event most harmful to human health is tornados, followed by excessive heat and lightning when measured in terms of fatalities and injuries.
+The events with the most economic consequences is flood, followed by hurricane/typhoon and tornados when measured in terms of property and crops damage.
+More funding is needed to mitigate the damages from these events.
+
+
